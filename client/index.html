@@ -2,24 +2,78 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Quran Reading Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+    <title>Quran Tracker - Daily Reading Progress</title>
     
-    <!-- PWA Meta Tags -->
-    <meta name="description" content="Track your Quran reading progress and set goals for consistent reading habits" />
-    <meta name="theme-color" content="#4F46E5" />
+    <!-- Core PWA Meta Tags -->
+    <meta name="description" content="Track your Quran reading progress, set goals, monitor khatma completion, and maintain consistent reading habits - even offline." />
+    <meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1F1F37" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    
+    <!-- iOS specific meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Quran Tracker" />
     
-    <!-- PWA Icons and Manifest -->
+    <!-- Standard PWA tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Quran Tracker" />
+    
+    <!-- Additional PWA info -->
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta name="msapplication-tooltip" content="Track your Quran reading progress" />
+    <meta name="msapplication-starturl" content="/" />
+    <meta name="msapplication-config" content="none" />
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Quran Tracker" />
+    <meta property="og:description" content="Track your Quran reading progress and set goals for consistent reading habits" />
+    <meta property="og:image" content="/icon-512.svg" />
+    <meta property="og:url" content="/" />
+    
+    <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.webmanifest" />
+    
+    <!-- Favicon and Icons -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/icon-192.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     
-    <!-- Fonts -->
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.svg" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/icon-192.svg" />
+    
+    <!-- Microsoft Tile -->
+    <meta name="msapplication-TileImage" content="/icon-192.svg" />
+    <meta name="msapplication-TileColor" content="#4F46E5" />
+    
+    <!-- iOS splash screens -->
+    <!-- iPhone X (1125px x 2436px) -->
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" href="/icon-512.svg" />
+    <!-- iPhone 8, 7, 6s, 6 (750px x 1334px) -->
+    <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" href="/icon-512.svg" />
+    <!-- iPhone 8 Plus, 7 Plus, 6s Plus, 6 Plus (1242px x 2208px) -->
+    <link rel="apple-touch-startup-image" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)" href="/icon-512.svg" />
+    <!-- iPad Pro 12.9" (2048px x 2732px) -->
+    <link rel="apple-touch-startup-image" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)" href="/icon-512.svg" />
+    
+    <!-- Disable auto-detection of possible phone numbers -->
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Nunito:wght@600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload Service Worker Script -->
+    <link rel="preload" href="/sw.js" as="script" />
+    
+    <!-- iOS PWA App Title -->
+    <meta name="apple-mobile-web-app-title" content="Quran Tracker">
+    
+    <!-- Custom Styles -->
     <style>
       .font-display {
         font-family: 'Nunito', sans-serif;
@@ -31,12 +85,38 @@
         margin: 2px;
         border-radius: 2px;
       }
+      
+      /* Add smooth scrolling behavior */
+      html {
+        scroll-behavior: smooth;
+      }
+      
+      /* Remove tap highlight on iOS */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      
+      /* iOS fixes for standalone mode */
+      @media (display-mode: standalone) {
+        body {
+          /* Add padding to account for the status bar */
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+          padding-right: env(safe-area-inset-right);
+        }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: system-ui, -apple-system, sans-serif;">
+        <h2>JavaScript is required</h2>
+        <p>Please enable JavaScript to use the Quran Tracker application.</p>
+        <img src="/icon-192.svg" alt="Quran Tracker Logo" style="width: 96px; height: 96px; margin-top: 20px;" />
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- This script injects a replit badge into the page, please feel free to remove this line -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-badge-v3.js"></script>
   </body>
 </html>
