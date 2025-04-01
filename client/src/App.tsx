@@ -10,6 +10,7 @@ import Settings from "./pages/settings";
 import NotFound from "@/pages/not-found";
 import InstallPWABanner from "./components/install-pwa-banner";
 import OfflineIndicator from "./components/offline-indicator";
+import PWADebugger from "./components/pwa-debugger";
 import { useState } from "react";
 
 function Router() {
@@ -51,11 +52,14 @@ function Router() {
 }
 
 function App() {
+  const isDev = import.meta.env.MODE === 'development';
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
       <OfflineIndicator />
       <InstallPWABanner />
+      {isDev && <PWADebugger />}
       <Toaster />
     </QueryClientProvider>
   );
