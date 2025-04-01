@@ -43,7 +43,7 @@ function Router() {
           <Route path="/history" component={History} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/settings" component={Settings} />
-          <Route component={NotFound} />
+          <Route path="/:rest*" component={NotFound} />
         </Switch>
       </div>
       
