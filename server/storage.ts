@@ -81,7 +81,7 @@ export class PgStorage implements IStorage {
     return db.select()
       .from(readingLogs)
       .where(eq(readingLogs.userId, userId))
-      .orderBy(desc(readingLogs.date));
+      .orderBy(desc(readingLogs.date), desc(readingLogs.createdAt));
   }
   
   async getReadingLogsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<ReadingLog[]> {
@@ -113,7 +113,7 @@ export class PgStorage implements IStorage {
     return db.select()
       .from(readingLogs)
       .where(eq(readingLogs.userId, userId))
-      .orderBy(desc(readingLogs.date))
+      .orderBy(desc(readingLogs.date), desc(readingLogs.createdAt))
       .limit(limit);
   }
   

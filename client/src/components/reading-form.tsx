@@ -67,7 +67,7 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   // Set starting point based on most recent log when form loads
   useEffect(() => {
     if (recentLogs && recentLogs.length > 0) {
-      // Find the most recent log
+      // Find the most recent log based on date and creation time
       const lastLog = recentLogs[0];
       
       // If there's an end page, start from the next page
@@ -76,9 +76,15 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
         const nextPage = lastLog.endPage + 1;
         const nextJuz = Math.ceil(nextPage / 20);
         
-        // Set the form values
-        form.setValue("startingJuz", Math.min(nextJuz, 30));
-        form.setValue("startingPage", nextPage > 604 ? 1 : nextPage);
+        // Reset to page 1 if we've completed the Quran
+        if (nextPage > 604) {
+          form.setValue("startingJuz", 1);
+          form.setValue("startingPage", 1);
+        } else {
+          // Set the form values to continue from where we left off
+          form.setValue("startingJuz", Math.min(nextJuz, 30));
+          form.setValue("startingPage", nextPage);
+        }
       }
     }
   }, [recentLogs, form]);

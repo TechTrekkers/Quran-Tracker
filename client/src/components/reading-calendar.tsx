@@ -30,12 +30,22 @@ export default function ReadingCalendar({ readingLogs, days = 30 }: ReadingCalen
     monthLabels.add(month);
   });
   
+  // Array of weekday labels
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   return (
     <div>
       {/* Month Labels */}
       <div className="flex mb-2 text-xs text-neutral-600">
         {Array.from(monthLabels).map((month, i) => (
           <div key={month} className="mr-2">{month}</div>
+        ))}
+      </div>
+      
+      {/* Weekday Labels */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {weekdays.map((day) => (
+          <div key={day} className="text-center text-xs text-neutral-500 font-medium">{day}</div>
         ))}
       </div>
       
