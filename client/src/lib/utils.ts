@@ -44,9 +44,17 @@ export function formatDateTimeRelative(date: string | Date): string {
 }
 
 export function getJuzPageRange(juzNumber: number): { start: number; end: number } {
-  const pagesPerJuz = 20; // Approximate
-  const startPage = ((juzNumber - 1) * pagesPerJuz) + 1;
-  const endPage = juzNumber * pagesPerJuz;
+  // Special cases for juz 1 and juz 30 
+  if (juzNumber === 1) {
+    return { start: 1, end: 21 }; // Juz 1 has 21 pages
+  } else if (juzNumber === 30) {
+    return { start: 582, end: 604 }; // Juz 30 has 23 pages (582-604)
+  }
+  
+  // Handle the rest of the juz (each with 20 pages)
+  // Need to adjust calculations to account for juz 1 having 21 pages
+  const startPage = 22 + ((juzNumber - 2) * 20);
+  const endPage = startPage + 19; // 20 pages total (end - start + 1 = 20)
   
   return { start: startPage, end: endPage };
 }

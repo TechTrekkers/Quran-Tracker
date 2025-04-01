@@ -59,8 +59,26 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   
   // Calculate total pages read when juz or additional pages change
   useEffect(() => {
-    const pagesPerJuz = 20;
-    const totalPagesRead = (juzRead * pagesPerJuz) + additionalPages;
+    // Calculate pages based on which juz are being read
+    let totalPagesRead = 0;
+    
+    // First count complete juz
+    for (let i = 0; i < juzRead; i++) {
+      const currentJuzNumber = (startingJuz + i - 1) % 30 + 1; // Wrap around to juz 1 after juz 30
+      
+      // Apply special page counts for juz 1 and 30
+      if (currentJuzNumber === 1) {
+        totalPagesRead += 21; // Juz 1 has 21 pages
+      } else if (currentJuzNumber === 30) {
+        totalPagesRead += 23; // Juz 30 has 23 pages
+      } else {
+        totalPagesRead += 20; // All other juz have 20 pages
+      }
+    }
+    
+    // Add any additional pages
+    totalPagesRead += additionalPages;
+    
     setCalculatedPages(totalPagesRead);
     form.setValue("pagesRead", totalPagesRead > 0 ? totalPagesRead : 0);
     
@@ -68,7 +86,7 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
     const startPage = form.getValues("startingPage");
     const endPage = startPage + totalPagesRead - 1;
     setWillWrapAround(endPage > 604);
-  }, [juzRead, additionalPages, form]);
+  }, [juzRead, additionalPages, startingJuz, form]);
   
   // Set starting point based on most recent log when form loads
   useEffect(() => {
@@ -80,15 +98,17 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
       if (lastLog.endPage) {
         // Calculate which juz this falls into
         const nextPage = lastLog.endPage + 1;
-        const nextJuz = Math.ceil(nextPage / 20);
         
         // Reset to page 1 if we've completed the Quran
         if (nextPage > 604) {
           form.setValue("startingJuz", 1);
           form.setValue("startingPage", 1);
         } else {
+          // Calculate juz correctly using our helper function
+          const nextJuz = getJuzForPage(nextPage);
+          
           // Set the form values to continue from where we left off
-          form.setValue("startingJuz", Math.min(nextJuz, 30));
+          form.setValue("startingJuz", nextJuz);
           form.setValue("startingPage", nextPage);
         }
       }
@@ -98,7 +118,9 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   // Update starting page when starting juz changes
   useEffect(() => {
     const { start } = getJuzPageRange(startingJuz);
-    if (Math.floor((startingPage - 1) / 20) + 1 !== startingJuz) {
+    // Check if the current page doesn't belong to the selected juz
+    const currentPageJuz = getJuzForPage(startingPage);
+    if (currentPageJuz !== startingJuz) {
       form.setValue("startingPage", start);
     }
   }, [startingJuz, startingPage, form]);
@@ -179,12 +201,29 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
     form.setValue("startingJuz", Math.max(currentJuz - 1, 1));
   };
   
+  // Helper function to determine juz number from page
+  const getJuzForPage = (page: number): number => {
+    // Handle special cases for juz 1 (pages 1-21)
+    if (page <= 21) {
+      return 1;
+    }
+    
+    // Handle special cases for juz 30 (pages 582-604)
+    if (page >= 582) {
+      return 30;
+    }
+    
+    // For pages in juz 2-29, account for juz 1 having 21 pages
+    const adjustedPage = page - 21; // Subtract juz 1's pages
+    return Math.floor(adjustedPage / 20) + 2; // +2 because we start at juz 2
+  };
+
   const incrementPage = () => {
     const currentPage = form.getValues("startingPage");
     form.setValue("startingPage", Math.min(currentPage + 1, 604));
     
     // If we cross into next juz, update the juz number
-    const newJuz = Math.ceil(Math.min(currentPage + 1, 604) / 20);
+    const newJuz = getJuzForPage(Math.min(currentPage + 1, 604));
     if (newJuz !== form.getValues("startingJuz")) {
       form.setValue("startingJuz", newJuz);
     }
@@ -195,7 +234,7 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
     form.setValue("startingPage", Math.max(currentPage - 1, 1));
     
     // If we cross into previous juz, update the juz number
-    const newJuz = Math.ceil(Math.max(currentPage - 1, 1) / 20);
+    const newJuz = getJuzForPage(Math.max(currentPage - 1, 1));
     if (newJuz !== form.getValues("startingJuz")) {
       form.setValue("startingJuz", newJuz);
     }
@@ -385,7 +424,8 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
                     </div>
                   </FormControl>
                   <FormDescription className="text-xs">
-                    {field.value} juz = {field.value * 20} pages
+                    {field.value} juz ≈ {calculatedPages - form.getValues("additionalPages")} pages 
+                    {/* We show the actual calculated pages instead of a simple multiply by 20 */}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

@@ -239,13 +239,41 @@ export class PgStorage implements IStorage {
     // Track pages read in each juz for the current khatma
     currentKhatmaLogs.forEach(log => {
       // Calculate start and end pages properly
-      const startPage = log.startPage || ((log.juzNumber - 1) * pagesPerJuz + 1);
+      let startPage;
+      if (log.startPage) {
+        startPage = log.startPage;
+      } else {
+        // Calculate start page based on juz number with special cases
+        if (log.juzNumber === 1) {
+          startPage = 1; // Juz 1 starts at page 1
+        } else if (log.juzNumber === 30) {
+          startPage = 582; // Juz 30 starts at page 582
+        } else {
+          // For juz 2-29, account for juz 1 having 21 pages
+          startPage = 22 + ((log.juzNumber - 2) * 20);
+        }
+      }
       const endPage = log.endPage || (startPage + log.pagesRead - 1);
       
       // For all pages in the log, determine which juz they belong to
       for (let page = startPage; page <= endPage; page++) {
         // Calculate which juz this page belongs to (1-based)
-        const juzForPage = Math.ceil(page / pagesPerJuz);
+        let juzForPage;
+        
+        // Special cases for juz 1 (pages 1-21)
+        if (page <= 21) {
+          juzForPage = 1;
+        }
+        // Special cases for juz 30 (pages 582-604)
+        else if (page >= 582) {
+          juzForPage = 30;
+        }
+        // For pages in juz 2-29
+        else {
+          // Adjust calculation to account for juz 1 having 21 pages
+          const adjustedPage = page - 21; // Subtract juz 1's pages
+          juzForPage = Math.floor(adjustedPage / 20) + 2; // +2 because we start at juz 2
+        }
         
         // Get the set of pages for that juz
         const juzPages = juzMap.get(juzForPage) || new Set<number>();
@@ -261,10 +289,19 @@ export class PgStorage implements IStorage {
     // Create detailed map with completion status
     return Array.from(juzMap.entries()).map(([juzNumber, pages]) => {
       const pagesRead = pages.size;
-      const percentComplete = Math.round((pagesRead / pagesPerJuz) * 100);
+      
+      // Handle special cases for juz 1 and juz 30
+      let totalPagesInJuz = 20;
+      if (juzNumber === 1) {
+        totalPagesInJuz = 21;
+      } else if (juzNumber === 30) {
+        totalPagesInJuz = 23;
+      }
+      
+      const percentComplete = Math.round((pagesRead / totalPagesInJuz) * 100);
       
       let status: JuzStatus = 'not-started';
-      if (pagesRead >= pagesPerJuz) {
+      if (pagesRead >= totalPagesInJuz) {
         status = 'completed';
       } else if (pagesRead > 0) {
         status = 'partial';
@@ -274,7 +311,7 @@ export class PgStorage implements IStorage {
         juzNumber,
         status,
         pagesRead,
-        totalPages: pagesPerJuz,
+        totalPages: totalPagesInJuz,
         percentComplete
       };
     });
@@ -415,7 +452,18 @@ export class PgStorage implements IStorage {
       
       const juzNumber = Math.min(Math.floor(i / 3) + 1, 30);
       const pagesRead = Math.floor(Math.random() * 5) + 3;
-      const startPage = (juzNumber - 1) * 20 + 1;
+      
+      // Get proper start page based on juz number
+      let startPage;
+      if (juzNumber === 1) {
+        startPage = 1; // Juz 1 starts at page 1
+      } else if (juzNumber === 30) {
+        startPage = 582; // Juz 30 starts at page 582
+      } else {
+        // For juz 2-29, account for juz 1 having 21 pages
+        startPage = 22 + ((juzNumber - 2) * 20);
+      }
+      
       const endPage = startPage + pagesRead - 1;
       
       await this.createReadingLog({
@@ -429,13 +477,21 @@ export class PgStorage implements IStorage {
     }
     
     // Add today's reading
+    const todayJuz = 5;
+    const todayPagesRead = 12;
+    
+    // Calculate correct start page for juz 5
+    // Juz 5 starts after juz 1 (21 pages) and juz 2-4 (60 pages)
+    const todayStartPage = 22 + ((todayJuz - 2) * 20);
+    const todayEndPage = todayStartPage + todayPagesRead - 1;
+    
     await this.createReadingLog({
       userId,
       date: today.toISOString().split('T')[0],
-      juzNumber: 5,
-      pagesRead: 12,
-      startPage: 81,
-      endPage: 92
+      juzNumber: todayJuz,
+      pagesRead: todayPagesRead,
+      startPage: todayStartPage,
+      endPage: todayEndPage
     });
   }
 }
