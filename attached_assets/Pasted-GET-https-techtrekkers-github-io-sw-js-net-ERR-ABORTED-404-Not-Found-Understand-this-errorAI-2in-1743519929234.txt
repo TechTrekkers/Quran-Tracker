@@ -1,0 +1,162 @@
+GET https://techtrekkers.github.io/sw.js net::ERR_ABORTED 404 (Not Found)Understand this errorAI
+2index-AruoSnTp.js:50 IndexedDB initialized successfully
+A bad HTTP response code (404) was received when fetching the script.Understand this errorAI
+index-AruoSnTp.js:251 ServiceWorker registration failed: TypeError: Failed to register a ServiceWorker for scope ('https://techtrekkers.github.io/QuranTracker/') with script ('https://techtrekkers.github.io/QuranTracker/sw.js'): A bad HTTP response code (404) was received when fetching the script.
+(anonymous) @ index-AruoSnTp.js:251Understand this errorAI
+QuranTracker/:1 The resource https://techtrekkers.github.io/sw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warningAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/stats 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/reading-goals/active 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/reading-logs/recent 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/juz-map 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/reading-logs 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+techtrekkers.github.io/:1 The resource https://techtrekkers.github.io/sw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warningAI
+index-AruoSnTp.js:50 
+            
+            
+           GET https://techtrekkers.github.io/api/reading-logs/recent 404 (Not Found)
+(anonymous) @ index-AruoSnTp.js:50
+o @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+fetch @ index-AruoSnTp.js:48
+td @ index-AruoSnTp.js:48
+onSubscribe @ index-AruoSnTp.js:48
+subscribe @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+CR @ index-AruoSnTp.js:38
+Tg @ index-AruoSnTp.js:40
+$u @ index-AruoSnTp.js:40
+X6 @ index-AruoSnTp.js:40
+Is @ index-AruoSnTp.js:40
+DE @ index-AruoSnTp.js:40
+ms @ index-AruoSnTp.js:38
+(anonymous) @ index-AruoSnTp.js:40Understand this errorAI
+techtrekkers.github.io/:1 The resource https://techtrekkers.github.io/sw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.Understand this warningAI
+index-AruoSnTp.js:50 
+            
+            
+           POST https://techtrekkers.github.io/api/reading-logs 405 (Method Not Allowed)
+zP @ index-AruoSnTp.js:50
+mutationFn @ index-AruoSnTp.js:203
+fn @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:48
+start @ index-AruoSnTp.js:48
+execute @ index-AruoSnTp.js:48
+await in execute
+mutate @ index-AruoSnTp.js:48
+(anonymous) @ index-AruoSnTp.js:48
+y @ index-AruoSnTp.js:203
+(anonymous) @ index-AruoSnTp.js:203
+await in (anonymous)
+mU @ index-AruoSnTp.js:37
+yU @ index-AruoSnTp.js:37
+gU @ index-AruoSnTp.js:37
+aE @ index-AruoSnTp.js:37
+hR @ index-AruoSnTp.js:37
+(anonymous) @ index-AruoSnTp.js:37
+AP @ index-AruoSnTp.js:40
+I$ @ index-AruoSnTp.js:37
+Hb @ index-AruoSnTp.js:37
+eP @ index-AruoSnTp.js:37
+$U @ index-AruoSnTp.js:37Understand this errorAI
+techtrekkers.github.io/:1 The resource https://techtrekkers.github.io/sw.js was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
