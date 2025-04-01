@@ -29,6 +29,7 @@ const formSchema = z.object({
 export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   const { toast } = useToast();
   const [calculatedPages, setCalculatedPages] = useState(0);
+  const [willWrapAround, setWillWrapAround] = useState(false);
   
   // Set default date to today
   const today = new Date().toISOString().split('T')[0];
@@ -62,6 +63,11 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
     const totalPagesRead = (juzRead * pagesPerJuz) + additionalPages;
     setCalculatedPages(totalPagesRead);
     form.setValue("pagesRead", totalPagesRead > 0 ? totalPagesRead : 0);
+    
+    // Check if reading will wrap around from end to beginning of Quran
+    const startPage = form.getValues("startingPage");
+    const endPage = startPage + totalPagesRead - 1;
+    setWillWrapAround(endPage > 604);
   }, [juzRead, additionalPages, form]);
   
   // Set starting point based on most recent log when form loads
@@ -101,7 +107,12 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
     mutationFn: (values: z.infer<typeof formSchema>) => {
       // Calculate end page based on starting point and pages read
       const startPage = values.startingPage;
-      const endPage = startPage + values.pagesRead - 1;
+      
+      // Calculate the end page, considering wrap-around after page 604 (end of Quran)
+      let endPage = startPage + values.pagesRead - 1;
+      if (endPage > 604) {
+        endPage = (endPage - 604);  // Wrap around to beginning
+      }
       
       // Format data for the API
       const readingLog = {
@@ -192,8 +203,10 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   
   const incrementJuzRead = () => {
     const current = form.getValues("juzRead");
-    const max = totalJuzInQuran - form.getValues("startingJuz") + 1;
-    form.setValue("juzRead", Math.min(current + 1, max));
+    // This calculates how many juz from the starting juz to the end of the Quran
+    const maxBeforeWrap = totalJuzInQuran - form.getValues("startingJuz") + 1;
+    // Allow user to increment beyond the end of the Quran (will wrap around in submission)
+    form.setValue("juzRead", current + 1);
   };
   
   const decrementJuzRead = () => {
@@ -421,6 +434,16 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
               <span className="font-medium">Total Pages Read:</span>
               <span className="text-lg font-bold">{calculatedPages}</span>
             </div>
+            {willWrapAround && (
+              <div className="mt-2 text-xs text-amber-600 flex items-center gap-1 bg-amber-50 p-2 rounded">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 16v-4" />
+                  <path d="M12 8h.01" />
+                </svg>
+                Your reading will wrap around from the end to the beginning of the Quran
+              </div>
+            )}
           </div>
         </div>
         
