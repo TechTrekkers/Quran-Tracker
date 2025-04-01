@@ -75,6 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = 1;
       
       const totalPagesRead = await storage.getTotalPagesRead(userId);
+      const totalKhatmas = await storage.getTotalKhatmas(userId);
       const juzCompletion = await storage.getJuzCompletion(userId);
       const completedJuz = juzCompletion.filter(j => j.completed).length;
       const currentStreak = await storage.getCurrentStreak(userId);
@@ -83,6 +84,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         totalPagesRead,
+        totalKhatmas,
         completedJuz,
         currentStreak,
         longestStreak,

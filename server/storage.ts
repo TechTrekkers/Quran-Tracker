@@ -24,6 +24,7 @@ export interface IStorage {
   
   // Analytics operations
   getTotalPagesRead(userId: number): Promise<number>;
+  getTotalKhatmas(userId: number): Promise<number>;
   getJuzCompletion(userId: number): Promise<{ juzNumber: number, completed: boolean }[]>;
   getCurrentStreak(userId: number): Promise<number>;
   getLongestStreak(userId: number): Promise<number>;
@@ -200,6 +201,12 @@ export class MemStorage implements IStorage {
   async getTotalPagesRead(userId: number): Promise<number> {
     const logs = await this.getReadingLogs(userId);
     return logs.reduce((sum, log) => sum + log.pagesRead, 0);
+  }
+  
+  async getTotalKhatmas(userId: number): Promise<number> {
+    const totalPages = await this.getTotalPagesRead(userId);
+    // A khatma is a complete reading of the Quran (604 pages)
+    return Math.floor(totalPages / 604);
   }
   
   async getJuzCompletion(userId: number): Promise<{ juzNumber: number, completed: boolean }[]> {
