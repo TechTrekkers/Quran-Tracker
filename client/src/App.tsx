@@ -8,6 +8,8 @@ import History from "./pages/history";
 import Analytics from "./pages/analytics";
 import Settings from "./pages/settings";
 import NotFound from "@/pages/not-found";
+import InstallPWABanner from "./components/install-pwa-banner";
+import OfflineIndicator from "./components/offline-indicator";
 import { useState } from "react";
 
 function Router() {
@@ -52,6 +54,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router />
+      <OfflineIndicator />
+      <InstallPWABanner />
       <Toaster />
     </QueryClientProvider>
   );

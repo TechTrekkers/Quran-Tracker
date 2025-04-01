@@ -2,6 +2,18 @@ import { pgTable, text, serial, integer, boolean, date, timestamp } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Define JuzStatus type for tracking reading progress
+export type JuzStatus = 'completed' | 'partial' | 'not-started';
+
+// Define JuzMapItem interface for visualization
+export interface JuzMapItem {
+  juzNumber: number;
+  status: JuzStatus;
+  pagesRead: number;
+  totalPages: number;
+  percentComplete: number;
+}
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
