@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getJuzPageRange } from "@/lib/utils";
+import { getJuzPageRange, totalJuzInQuran } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Minus, HelpCircle } from "lucide-react";
 
 interface ReadingFormProps {
   onSuccess?: () => void;
@@ -18,38 +19,94 @@ interface ReadingFormProps {
 
 const formSchema = z.object({
   date: z.string(),
-  juzNumber: z.coerce.number().min(1).max(30),
+  startingJuz: z.coerce.number().min(1).max(30),
+  startingPage: z.coerce.number().min(1).max(604),
+  juzRead: z.coerce.number().min(0).max(30),
+  additionalPages: z.coerce.number().min(0).max(604),
   pagesRead: z.coerce.number().min(1).max(604),
-  startPage: z.coerce.number().optional(),
-  endPage: z.coerce.number().optional(),
 });
 
 export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   const { toast } = useToast();
-  const [showPageRange, setShowPageRange] = useState(false);
+  const [calculatedPages, setCalculatedPages] = useState(0);
   
   // Set default date to today
   const today = new Date().toISOString().split('T')[0];
+  
+  // Get recent reading logs to determine the last position
+  const { data: recentLogs } = useQuery({
+    queryKey: ['/api/reading-logs/recent'],
+  });
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: today,
-      juzNumber: 1,
-      pagesRead: 1,
+      startingJuz: 1,
+      startingPage: 1,
+      juzRead: 0,
+      additionalPages: 0,
+      pagesRead: 0,
     },
   });
   
+  // Get the current values from the form
+  const startingJuz = form.watch("startingJuz");
+  const startingPage = form.watch("startingPage");
+  const juzRead = form.watch("juzRead");
+  const additionalPages = form.watch("additionalPages");
+  
+  // Calculate total pages read when juz or additional pages change
+  useEffect(() => {
+    const pagesPerJuz = 20;
+    const totalPagesRead = (juzRead * pagesPerJuz) + additionalPages;
+    setCalculatedPages(totalPagesRead);
+    form.setValue("pagesRead", totalPagesRead > 0 ? totalPagesRead : 0);
+  }, [juzRead, additionalPages, form]);
+  
+  // Set starting point based on most recent log when form loads
+  useEffect(() => {
+    if (recentLogs && recentLogs.length > 0) {
+      // Find the most recent log
+      const lastLog = recentLogs[0];
+      
+      // If there's an end page, start from the next page
+      if (lastLog.endPage) {
+        // Calculate which juz this falls into
+        const nextPage = lastLog.endPage + 1;
+        const nextJuz = Math.ceil(nextPage / 20);
+        
+        // Set the form values
+        form.setValue("startingJuz", Math.min(nextJuz, 30));
+        form.setValue("startingPage", nextPage > 604 ? 1 : nextPage);
+      }
+    }
+  }, [recentLogs, form]);
+  
+  // Update starting page when starting juz changes
+  useEffect(() => {
+    const { start } = getJuzPageRange(startingJuz);
+    if (Math.floor((startingPage - 1) / 20) + 1 !== startingJuz) {
+      form.setValue("startingPage", start);
+    }
+  }, [startingJuz, startingPage, form]);
+  
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof formSchema>) => {
-      // If page range is not shown, calculate start and end pages based on juz
-      if (!showPageRange) {
-        const { start } = getJuzPageRange(values.juzNumber);
-        values.startPage = start;
-        values.endPage = start + values.pagesRead - 1;
-      }
+      // Calculate end page based on starting point and pages read
+      const startPage = values.startingPage;
+      const endPage = startPage + values.pagesRead - 1;
       
-      return apiRequest('POST', '/api/reading-logs', values);
+      // Format data for the API
+      const readingLog = {
+        date: values.date,
+        juzNumber: values.startingJuz,
+        pagesRead: values.pagesRead,
+        startPage: startPage,
+        endPage: endPage
+      };
+      
+      return apiRequest('POST', '/api/reading-logs', readingLog);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/reading-logs'] });
@@ -59,11 +116,11 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
         title: "Reading logged successfully",
         description: "Your reading progress has been saved.",
       });
-      form.reset({
-        date: today,
-        juzNumber: 1,
-        pagesRead: 1,
-      });
+      
+      // Reset juz read and additional pages, but keep the starting point
+      form.setValue("juzRead", 0);
+      form.setValue("additionalPages", 0);
+      
       if (onSuccess) onSuccess();
     },
     onError: (error) => {
@@ -76,42 +133,75 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
   });
   
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    if (values.pagesRead < 1) {
+      toast({
+        title: "Invalid input",
+        description: "Please read at least 1 page before logging.",
+        variant: "destructive",
+      });
+      return;
+    }
     mutation.mutate(values);
   };
   
-  // Handle juz change to update page range hints
-  const handleJuzChange = (value: string) => {
-    const juzNumber = parseInt(value);
-    const { start, end } = getJuzPageRange(juzNumber);
+  // Counter increment/decrement functions
+  const incrementJuz = () => {
+    const currentJuz = form.getValues("startingJuz");
+    form.setValue("startingJuz", Math.min(currentJuz + 1, totalJuzInQuran));
+  };
+  
+  const decrementJuz = () => {
+    const currentJuz = form.getValues("startingJuz");
+    form.setValue("startingJuz", Math.max(currentJuz - 1, 1));
+  };
+  
+  const incrementPage = () => {
+    const currentPage = form.getValues("startingPage");
+    form.setValue("startingPage", Math.min(currentPage + 1, 604));
     
-    // Update form values
-    form.setValue("juzNumber", juzNumber);
-    
-    if (showPageRange) {
-      form.setValue("startPage", start);
-      form.setValue("endPage", Math.min(start + form.getValues("pagesRead") - 1, end));
+    // If we cross into next juz, update the juz number
+    const newJuz = Math.ceil(Math.min(currentPage + 1, 604) / 20);
+    if (newJuz !== form.getValues("startingJuz")) {
+      form.setValue("startingJuz", newJuz);
     }
   };
   
-  // Toggle page range visibility
-  const togglePageRange = () => {
-    setShowPageRange(!showPageRange);
+  const decrementPage = () => {
+    const currentPage = form.getValues("startingPage");
+    form.setValue("startingPage", Math.max(currentPage - 1, 1));
     
-    if (!showPageRange) {
-      // When enabling page range, set default values
-      const juzNumber = form.getValues("juzNumber");
-      const { start } = getJuzPageRange(juzNumber);
-      const pagesRead = form.getValues("pagesRead");
-      
-      form.setValue("startPage", start);
-      form.setValue("endPage", start + pagesRead - 1);
+    // If we cross into previous juz, update the juz number
+    const newJuz = Math.ceil(Math.max(currentPage - 1, 1) / 20);
+    if (newJuz !== form.getValues("startingJuz")) {
+      form.setValue("startingJuz", newJuz);
     }
+  };
+  
+  const incrementJuzRead = () => {
+    const current = form.getValues("juzRead");
+    const max = totalJuzInQuran - form.getValues("startingJuz") + 1;
+    form.setValue("juzRead", Math.min(current + 1, max));
+  };
+  
+  const decrementJuzRead = () => {
+    const current = form.getValues("juzRead");
+    form.setValue("juzRead", Math.max(current - 1, 0));
+  };
+  
+  const incrementAdditionalPages = () => {
+    const current = form.getValues("additionalPages");
+    form.setValue("additionalPages", Math.min(current + 1, 20));
+  };
+  
+  const decrementAdditionalPages = () => {
+    const current = form.getValues("additionalPages");
+    form.setValue("additionalPages", Math.max(current - 1, 0));
   };
   
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="date"
@@ -125,80 +215,56 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
               </FormItem>
             )}
           />
-          
-          <FormField
-            control={form.control}
-            name="juzNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Juz</FormLabel>
-                <Select 
-                  onValueChange={handleJuzChange} 
-                  defaultValue={field.value.toString()}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Juz" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {Array.from({ length: 30 }, (_, i) => {
-                      const juzNum = i + 1;
-                      const { start, end } = getJuzPageRange(juzNum);
-                      return (
-                        <SelectItem key={juzNum} value={juzNum.toString()}>
-                          Juz {juzNum} (Page {start}-{end})
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          
-          <FormField
-            control={form.control}
-            name="pagesRead"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Pages Read</FormLabel>
-                <div className="flex">
-                  <FormControl>
-                    <Input type="number" {...field} className="rounded-r-none" />
-                  </FormControl>
-                  <Button type="submit" className="rounded-l-none">
-                    Log
+        </div>
+        
+        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h3 className="text-sm font-medium mb-3 flex items-center">
+            Starting Point
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                    <HelpCircle className="h-4 w-4" />
                   </Button>
-                </div>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <Button 
-            type="button" 
-            variant="outline" 
-            size="sm" 
-            onClick={togglePageRange}
-          >
-            {showPageRange ? "Hide Page Range" : "Specify Page Range"}
-          </Button>
-        </div>
-        
-        {showPageRange && (
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Select where you started reading from. By default, this will be after your last reading session.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </h3>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
-              name="startPage"
+              name="startingJuz"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Start Page</FormLabel>
+                  <FormLabel>Starting Juz</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <div className="flex h-10">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-r-none border-r-0"
+                        onClick={decrementJuz}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex-1 flex items-center justify-center border border-input">
+                        {field.value}
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-l-none border-l-0"
+                        onClick={incrementJuz}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -207,19 +273,153 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
             
             <FormField
               control={form.control}
-              name="endPage"
+              name="startingPage"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>End Page</FormLabel>
+                  <FormLabel>Starting Page</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <div className="flex h-10">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-r-none border-r-0"
+                        onClick={decrementPage}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex-1 flex items-center justify-center border border-input">
+                        {field.value}
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-l-none border-l-0"
+                        onClick={incrementPage}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-        )}
+        </div>
+        
+        <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <h3 className="text-sm font-medium mb-3 flex items-center">
+            Reading Progress
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1">
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p className="max-w-xs">Enter how many complete juz you read, plus any additional pages.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="juzRead"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Complete Juz Read</FormLabel>
+                  <FormControl>
+                    <div className="flex h-10">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-r-none border-r-0"
+                        onClick={decrementJuzRead}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex-1 flex items-center justify-center border border-input">
+                        {field.value}
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-l-none border-l-0"
+                        onClick={incrementJuzRead}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormDescription className="text-xs">
+                    {field.value} juz = {field.value * 20} pages
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="additionalPages"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Additional Pages</FormLabel>
+                  <FormControl>
+                    <div className="flex h-10">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-r-none border-r-0"
+                        onClick={decrementAdditionalPages}
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex-1 flex items-center justify-center border border-input">
+                        {field.value}
+                      </div>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-10 w-10 rounded-l-none border-l-0"
+                        onClick={incrementAdditionalPages}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <div className="mt-4 bg-white p-3 rounded border border-slate-200">
+            <div className="flex justify-between items-center">
+              <span className="font-medium">Total Pages Read:</span>
+              <span className="text-lg font-bold">{calculatedPages}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-end">
+          <Button 
+            type="submit" 
+            disabled={calculatedPages < 1 || mutation.isPending}
+            className="w-full md:w-auto"
+          >
+            {mutation.isPending ? "Saving..." : "Save Reading Progress"}
+          </Button>
+        </div>
       </form>
     </Form>
   );
