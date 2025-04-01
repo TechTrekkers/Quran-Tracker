@@ -3,6 +3,9 @@ import {
   readingLogs, type ReadingLog, type InsertReadingLog,
   readingGoals, type ReadingGoal, type InsertReadingGoal
 } from "@shared/schema";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { eq, and, gte, lte, desc, sql, count } from "drizzle-orm";
+import postgres from "postgres";
 
 export interface IStorage {
   // User operations
@@ -29,178 +32,140 @@ export interface IStorage {
   getCurrentStreak(userId: number): Promise<number>;
   getLongestStreak(userId: number): Promise<number>;
   getConsistencyPercentage(userId: number, days: number): Promise<number>;
+  
+  // Database initialization
+  initializeDefaultData(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private readingLogs: Map<number, ReadingLog>;
-  private readingGoals: Map<number, ReadingGoal>;
-  private userIdCounter: number;
-  private logIdCounter: number;
-  private goalIdCounter: number;
+// Initialize PostgreSQL client and Drizzle ORM
+const queryClient = postgres(process.env.DATABASE_URL as string);
+const db = drizzle(queryClient);
 
-  constructor() {
-    this.users = new Map();
-    this.readingLogs = new Map();
-    this.readingGoals = new Map();
-    this.userIdCounter = 1;
-    this.logIdCounter = 1;
-    this.goalIdCounter = 1;
-    
-    // Create a default user for testing
-    const defaultUser: User = {
-      id: this.userIdCounter++,
-      username: "user",
-      password: "password"
-    };
-    this.users.set(defaultUser.id, defaultUser);
-    
-    // Create a default reading goal
-    const defaultGoal: ReadingGoal = {
-      id: this.goalIdCounter++,
-      userId: defaultUser.id,
-      totalPages: 604,
-      dailyTarget: 5,
-      weeklyTarget: 35,
-      isActive: true,
-      createdAt: new Date()
-    };
-    this.readingGoals.set(defaultGoal.id, defaultGoal);
-    
-    // Add some sample reading logs for the default user
-    this.addSampleReadingLogs(defaultUser.id);
-  }
-  
-  private addSampleReadingLogs(userId: number) {
-    const today = new Date();
-    
-    // Generate some reading logs for the past 30 days
-    for (let i = 30; i > 0; i--) {
-      // Skip some days to simulate inconsistency
-      if (i % 5 === 0) continue;
-      
-      const date = new Date();
-      date.setDate(today.getDate() - i);
-      
-      const juzNumber = Math.min(Math.floor(i / 3) + 1, 30);
-      const pagesRead = Math.floor(Math.random() * 5) + 3;
-      const startPage = (juzNumber - 1) * 20 + 1;
-      const endPage = startPage + pagesRead - 1;
-      
-      const log: ReadingLog = {
-        id: this.logIdCounter++,
-        userId,
-        date,
-        juzNumber,
-        pagesRead,
-        startPage,
-        endPage,
-        createdAt: date
-      };
-      
-      this.readingLogs.set(log.id, log);
-    }
-    
-    // Add today's reading
-    const log: ReadingLog = {
-      id: this.logIdCounter++,
-      userId,
-      date: today,
-      juzNumber: 5,
-      pagesRead: 12,
-      startPage: 81,
-      endPage: 92,
-      createdAt: today
-    };
-    
-    this.readingLogs.set(log.id, log);
-  }
+export class PgStorage implements IStorage {
+  constructor() {}
 
+  // User operations
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
   }
   
+  // Reading log operations
   async createReadingLog(log: InsertReadingLog): Promise<ReadingLog> {
-    const id = this.logIdCounter++;
-    const readingLog: ReadingLog = { 
-      ...log, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.readingLogs.set(id, readingLog);
-    return readingLog;
+    const result = await db.insert(readingLogs).values(log).returning();
+    return result[0];
   }
   
   async getReadingLogs(userId: number): Promise<ReadingLog[]> {
-    return Array.from(this.readingLogs.values())
-      .filter(log => log.userId === userId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return db.select()
+      .from(readingLogs)
+      .where(eq(readingLogs.userId, userId))
+      .orderBy(desc(readingLogs.date));
   }
   
   async getReadingLogsByDateRange(userId: number, startDate: Date, endDate: Date): Promise<ReadingLog[]> {
-    return Array.from(this.readingLogs.values())
-      .filter(log => 
-        log.userId === userId && 
-        new Date(log.date) >= startDate && 
-        new Date(log.date) <= endDate
+    return db.select()
+      .from(readingLogs)
+      .where(
+        and(
+          eq(readingLogs.userId, userId),
+          gte(readingLogs.date, startDate.toISOString().split('T')[0]),
+          lte(readingLogs.date, endDate.toISOString().split('T')[0])
+        )
       )
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .orderBy(readingLogs.date);
   }
   
   async getReadingLogsByJuz(userId: number, juzNumber: number): Promise<ReadingLog[]> {
-    return Array.from(this.readingLogs.values())
-      .filter(log => log.userId === userId && log.juzNumber === juzNumber)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return db.select()
+      .from(readingLogs)
+      .where(
+        and(
+          eq(readingLogs.userId, userId),
+          eq(readingLogs.juzNumber, juzNumber)
+        )
+      )
+      .orderBy(desc(readingLogs.date));
   }
   
   async getRecentReadingLogs(userId: number, limit: number): Promise<ReadingLog[]> {
-    return Array.from(this.readingLogs.values())
-      .filter(log => log.userId === userId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, limit);
+    return db.select()
+      .from(readingLogs)
+      .where(eq(readingLogs.userId, userId))
+      .orderBy(desc(readingLogs.date))
+      .limit(limit);
   }
   
+  // Reading goals operations
   async createReadingGoal(goal: InsertReadingGoal): Promise<ReadingGoal> {
-    const id = this.goalIdCounter++;
-    const readingGoal: ReadingGoal = { 
-      ...goal, 
-      id, 
-      createdAt: new Date() 
-    };
-    this.readingGoals.set(id, readingGoal);
-    return readingGoal;
+    // If this is marked as active, deactivate all other goals for this user
+    if (goal.isActive) {
+      await db.update(readingGoals)
+        .set({ isActive: false })
+        .where(eq(readingGoals.userId, goal.userId));
+    }
+    
+    const result = await db.insert(readingGoals).values(goal).returning();
+    return result[0];
   }
   
   async getActiveReadingGoal(userId: number): Promise<ReadingGoal | undefined> {
-    return Array.from(this.readingGoals.values())
-      .find(goal => goal.userId === userId && goal.isActive);
+    const result = await db.select()
+      .from(readingGoals)
+      .where(
+        and(
+          eq(readingGoals.userId, userId),
+          eq(readingGoals.isActive, true)
+        )
+      );
+    return result[0];
   }
   
   async updateReadingGoal(id: number, goal: Partial<InsertReadingGoal>): Promise<ReadingGoal | undefined> {
-    const existingGoal = this.readingGoals.get(id);
-    if (!existingGoal) return undefined;
+    // If this is being marked as active, deactivate all other goals for this user
+    if (goal.isActive) {
+      const existingGoal = await db.select()
+        .from(readingGoals)
+        .where(eq(readingGoals.id, id))
+        .then(res => res[0]);
+      
+      if (existingGoal) {
+        await db.update(readingGoals)
+          .set({ isActive: false })
+          .where(and(
+            eq(readingGoals.userId, existingGoal.userId),
+            sql`${readingGoals.id} != ${id}`
+          ));
+      }
+    }
     
-    const updatedGoal: ReadingGoal = { ...existingGoal, ...goal };
-    this.readingGoals.set(id, updatedGoal);
-    return updatedGoal;
+    const result = await db.update(readingGoals)
+      .set(goal)
+      .where(eq(readingGoals.id, id))
+      .returning();
+      
+    return result[0];
   }
   
+  // Analytics operations
   async getTotalPagesRead(userId: number): Promise<number> {
-    const logs = await this.getReadingLogs(userId);
-    return logs.reduce((sum, log) => sum + log.pagesRead, 0);
+    const result = await db.select({
+      totalPages: sql<number>`SUM(${readingLogs.pagesRead})`
+    })
+    .from(readingLogs)
+    .where(eq(readingLogs.userId, userId));
+    
+    return result[0]?.totalPages || 0;
   }
   
   async getTotalKhatmas(userId: number): Promise<number> {
@@ -210,6 +175,7 @@ export class MemStorage implements IStorage {
   }
   
   async getJuzCompletion(userId: number): Promise<{ juzNumber: number, completed: boolean }[]> {
+    // Get all reading logs for this user
     const logs = await this.getReadingLogs(userId);
     const juzMap = new Map<number, Set<number>>();
     
@@ -338,6 +304,74 @@ export class MemStorage implements IStorage {
     const daysRead = uniqueDates.size;
     return Math.round((daysRead / days) * 100);
   }
+  
+  // Initialize default data
+  async initializeDefaultData(): Promise<void> {
+    try {
+      // Check if we already have a default user
+      const existingUser = await this.getUserByUsername("user");
+      
+      if (!existingUser) {
+        // Create default user
+        const defaultUser = await this.createUser({
+          username: "user",
+          password: "password"
+        });
+        
+        // Create default reading goal
+        await this.createReadingGoal({
+          userId: defaultUser.id,
+          totalPages: 604,
+          dailyTarget: 5,
+          weeklyTarget: 35,
+          isActive: true
+        });
+        
+        // Add sample reading logs
+        await this.addSampleReadingLogs(defaultUser.id);
+      }
+    } catch (error) {
+      console.error("Error initializing default data:", error);
+    }
+  }
+  
+  private async addSampleReadingLogs(userId: number) {
+    const today = new Date();
+    
+    // Generate some reading logs for the past 30 days
+    for (let i = 30; i > 0; i--) {
+      // Skip some days to simulate inconsistency
+      if (i % 5 === 0) continue;
+      
+      const date = new Date();
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const juzNumber = Math.min(Math.floor(i / 3) + 1, 30);
+      const pagesRead = Math.floor(Math.random() * 5) + 3;
+      const startPage = (juzNumber - 1) * 20 + 1;
+      const endPage = startPage + pagesRead - 1;
+      
+      await this.createReadingLog({
+        userId,
+        date: dateStr,
+        juzNumber,
+        pagesRead,
+        startPage,
+        endPage
+      });
+    }
+    
+    // Add today's reading
+    await this.createReadingLog({
+      userId,
+      date: today.toISOString().split('T')[0],
+      juzNumber: 5,
+      pagesRead: 12,
+      startPage: 81,
+      endPage: 92
+    });
+  }
 }
 
-export const storage = new MemStorage();
+export const storage = new PgStorage();

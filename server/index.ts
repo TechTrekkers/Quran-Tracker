@@ -1,6 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { sql } from "drizzle-orm";
+import postgres from "postgres";
+import * as schema from "../shared/schema";
+
+// Initialize database connection for migrations
+const migrationClient = postgres(process.env.DATABASE_URL as string, { max: 1 });
 
 const app = express();
 app.use(express.json());
@@ -37,6 +46,51 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    // Initialize database schema
+    log("Initializing database schema...");
+    const db = drizzle(migrationClient, { schema });
+    
+    // Create tables if they don't exist
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL
+      );
+      
+      CREATE TABLE IF NOT EXISTS reading_logs (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        date DATE NOT NULL DEFAULT CURRENT_DATE,
+        juz_number INTEGER NOT NULL,
+        pages_read INTEGER NOT NULL,
+        start_page INTEGER,
+        end_page INTEGER,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS reading_goals (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        total_pages INTEGER NOT NULL DEFAULT 604,
+        daily_target INTEGER NOT NULL DEFAULT 5,
+        weekly_target INTEGER NOT NULL DEFAULT 35,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        is_active BOOLEAN NOT NULL DEFAULT TRUE
+      );
+    `);
+    
+    // Initialize default data
+    await storage.initializeDefaultData();
+    log("Database initialization complete");
+  } catch (error) {
+    log(`Database initialization error: ${error}`);
+  } finally {
+    // Close the migration client
+    await migrationClient.end();
+  }
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
