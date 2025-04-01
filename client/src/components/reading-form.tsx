@@ -106,7 +106,10 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
         endPage: endPage
       };
       
-      return apiRequest('POST', '/api/reading-logs', readingLog);
+      return apiRequest('/api/reading-logs', { 
+        method: 'POST', 
+        data: readingLog 
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/reading-logs'] });

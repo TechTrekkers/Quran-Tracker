@@ -10,9 +10,11 @@ import JuzMap from "@/components/juz-map";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [showReadingForm, setShowReadingForm] = useState(false);
+  const { toast } = useToast();
   
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['/api/stats'],
@@ -139,12 +141,22 @@ export default function Dashboard() {
             onClick={async () => {
               if (window.confirm("Are you sure you want to clear all reading data? This action cannot be undone.")) {
                 try {
-                  await apiRequest("/api/clear-data", { method: "POST" });
+                  await apiRequest("/api/clear-data", { 
+                    method: "POST"
+                  });
                   // Invalidate all queries to refresh the data
                   queryClient.invalidateQueries();
+                  toast({
+                    title: "Data reset successful",
+                    description: "All reading data has been cleared. Your progress has been reset.",
+                  });
                 } catch (error) {
                   console.error("Error clearing data:", error);
-                  alert("Failed to clear data. Please try again.");
+                  toast({
+                    title: "Error",
+                    description: "Failed to clear data. Please try again.",
+                    variant: "destructive",
+                  });
                 }
               }
             }}

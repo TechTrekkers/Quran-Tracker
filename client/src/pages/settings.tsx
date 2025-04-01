@@ -45,7 +45,10 @@ export default function Settings() {
   const updateGoalMutation = useMutation({
     mutationFn: async (data: z.infer<typeof goalFormSchema>) => {
       if (!goal) throw new Error("No active goal found");
-      return apiRequest('PUT', `/api/reading-goals/${goal.id}`, data);
+      return apiRequest(`/api/reading-goals/${goal.id}`, {
+        method: 'PUT',
+        data
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/reading-goals/active'] });
