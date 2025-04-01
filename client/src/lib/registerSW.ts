@@ -16,8 +16,8 @@ export function registerServiceWorker() {
         }
         
         // Register the service worker with correct path
-        const registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/',
+        const registration = await navigator.serviceWorker.register('./sw.js', {
+          scope: './',
           updateViaCache: 'none' // Don't use browser cache for service worker
         });
         
