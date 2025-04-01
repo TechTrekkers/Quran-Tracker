@@ -133,7 +133,9 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
       // Calculate the end page, considering wrap-around after page 604 (end of Quran)
       let endPage = startPage + values.pagesRead - 1;
       if (endPage > 604) {
-        endPage = (endPage - 604);  // Wrap around to beginning
+        endPage = endPage % 604;  // Wrap around to beginning
+        // If it wraps exactly to the end, use page 604 instead of 0
+        if (endPage === 0) endPage = 604;
       }
       
       // Format data for the API
