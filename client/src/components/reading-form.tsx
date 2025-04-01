@@ -112,9 +112,13 @@ export default function ReadingForm({ onSuccess }: ReadingFormProps) {
       });
     },
     onSuccess: () => {
+      // Invalidate all relevant queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/reading-logs'] });
       queryClient.invalidateQueries({ queryKey: ['/api/reading-logs/recent'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/juz-map'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/reading-goals/active'] });
+      
       toast({
         title: "Reading logged successfully",
         description: "Your reading progress has been saved.",

@@ -238,21 +238,24 @@ export class PgStorage implements IStorage {
     
     // Track pages read in each juz for the current khatma
     currentKhatmaLogs.forEach(log => {
-      const juzPages = juzMap.get(log.juzNumber) || new Set<number>();
+      // Calculate start and end pages properly
+      const startPage = log.startPage || ((log.juzNumber - 1) * pagesPerJuz + 1);
+      const endPage = log.endPage || (startPage + log.pagesRead - 1);
       
-      if (log.startPage && log.endPage) {
-        for (let page = log.startPage; page <= log.endPage; page++) {
-          juzPages.add(page);
-        }
-      } else {
-        // If specific pages aren't tracked, estimate based on juz number and pages read
-        const startPage = (log.juzNumber - 1) * pagesPerJuz + 1;
-        for (let i = 0; i < log.pagesRead; i++) {
-          juzPages.add(startPage + i);
-        }
+      // For all pages in the log, determine which juz they belong to
+      for (let page = startPage; page <= endPage; page++) {
+        // Calculate which juz this page belongs to (1-based)
+        const juzForPage = Math.ceil(page / pagesPerJuz);
+        
+        // Get the set of pages for that juz
+        const juzPages = juzMap.get(juzForPage) || new Set<number>();
+        
+        // Add this page to the appropriate juz
+        juzPages.add(page);
+        
+        // Update the juz map
+        juzMap.set(juzForPage, juzPages);
       }
-      
-      juzMap.set(log.juzNumber, juzPages);
     });
     
     // Create detailed map with completion status

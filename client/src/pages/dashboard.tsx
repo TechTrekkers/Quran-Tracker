@@ -37,15 +37,34 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between mb-6">
         <h2 className="text-2xl font-display font-bold">Dashboard</h2>
         <button 
-          className="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors flex items-center"
+          className={`${showReadingForm ? "bg-red-500 hover:bg-red-600" : "bg-primary hover:bg-secondary"} text-white px-4 py-2 rounded-lg transition-colors flex items-center`}
           onClick={() => setShowReadingForm(!showReadingForm)}
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-          </svg>
-          Log Today's Reading
+          {showReadingForm ? (
+            <>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+              Cancel
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+              </svg>
+              Log Today's Reading
+            </>
+          )}
         </button>
       </div>
+
+      {/* Log Reading Form */}
+      {showReadingForm && (
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
+          <h3 className="font-display font-bold text-lg mb-4">Log Your Reading</h3>
+          <ReadingForm onSuccess={() => setShowReadingForm(false)} />
+        </div>
+      )}
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -197,14 +216,6 @@ export default function Dashboard() {
           )}
         </div>
       </div>
-
-      {/* Log Reading Form */}
-      {showReadingForm && (
-        <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
-          <h3 className="font-display font-bold text-lg mb-4">Log Your Reading</h3>
-          <ReadingForm onSuccess={() => setShowReadingForm(false)} />
-        </div>
-      )}
     </div>
   );
 }
