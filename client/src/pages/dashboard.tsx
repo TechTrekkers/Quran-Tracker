@@ -6,7 +6,10 @@ import ReadingForm from "@/components/reading-form";
 import ActivityFeed from "@/components/activity-feed";
 import ReadingCalendar from "@/components/reading-calendar";
 import ProgressBar from "@/components/progress-bar";
+import JuzMap from "@/components/juz-map";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 
 export default function Dashboard() {
   const [showReadingForm, setShowReadingForm] = useState(false);
@@ -126,6 +129,35 @@ export default function Dashboard() {
             </>
           )}
         </div>
+      </div>
+
+      {/* Juz Progress Map */}
+      <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
+        <div className="flex flex-wrap items-center justify-between mb-4">
+          <h3 className="font-display font-bold text-lg">Juz Progress Map</h3>
+          <button
+            onClick={async () => {
+              if (window.confirm("Are you sure you want to clear all reading data? This action cannot be undone.")) {
+                try {
+                  await apiRequest("/api/clear-data", { method: "POST" });
+                  // Invalidate all queries to refresh the data
+                  queryClient.invalidateQueries();
+                } catch (error) {
+                  console.error("Error clearing data:", error);
+                  alert("Failed to clear data. Please try again.");
+                }
+              }
+            }}
+            className="text-sm text-red-600 hover:text-red-800 px-3 py-1 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            Reset Data
+          </button>
+        </div>
+        <p className="text-neutral-500 text-sm mb-4">
+          This map shows your progress through each juz for your current khatma (Quran reading).
+          Green indicates completed juz, yellow indicates in-progress, and gray indicates not yet started.
+        </p>
+        <JuzMap />
       </div>
 
       {/* Recent Activity & Reading Calendar */}

@@ -7,6 +7,16 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { eq, and, gte, lte, desc, sql, count } from "drizzle-orm";
 import postgres from "postgres";
 
+export type JuzStatus = 'completed' | 'partial' | 'not-started';
+
+export interface JuzMapItem {
+  juzNumber: number;
+  status: JuzStatus;
+  pagesRead: number;
+  totalPages: number;
+  percentComplete: number;
+}
+
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -29,6 +39,7 @@ export interface IStorage {
   getTotalPagesRead(userId: number): Promise<number>;
   getTotalKhatmas(userId: number): Promise<number>;
   getJuzCompletion(userId: number): Promise<{ juzNumber: number, completed: boolean }[]>;
+  getDetailedJuzMap(userId: number): Promise<JuzMapItem[]>;
   getCurrentStreak(userId: number): Promise<number>;
   getLongestStreak(userId: number): Promise<number>;
   getConsistencyPercentage(userId: number, days: number): Promise<number>;
@@ -175,17 +186,58 @@ export class PgStorage implements IStorage {
   }
   
   async getJuzCompletion(userId: number): Promise<{ juzNumber: number, completed: boolean }[]> {
+    // Get the detailed juz map
+    const detailedMap = await this.getDetailedJuzMap(userId);
+    
+    // Convert to the simpler format
+    return detailedMap.map(item => ({
+      juzNumber: item.juzNumber,
+      completed: item.status === 'completed'
+    }));
+  }
+  
+  async getDetailedJuzMap(userId: number): Promise<JuzMapItem[]> {
     // Get all reading logs for this user
     const logs = await this.getReadingLogs(userId);
+    
+    // Get total pages read to determine what khatma we're on
+    const totalPagesRead = await this.getTotalPagesRead(userId);
+    const currentKhatmaPages = totalPagesRead % 604; // 604 is total pages in Quran
+    
     const juzMap = new Map<number, Set<number>>();
+    const pagesPerJuz = 20; // Approximate
     
     // Initialize all 30 juz with empty sets
     for (let i = 1; i <= 30; i++) {
       juzMap.set(i, new Set<number>());
     }
     
-    // Track pages read in each juz
-    logs.forEach(log => {
+    // Only consider logs that are part of the current khatma
+    let remainingPages = currentKhatmaPages;
+    const relevantLogs = [...logs].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+    
+    const currentKhatmaLogs = [];
+    
+    // Start from the oldest logs and work forward until we've covered all current khatma pages
+    for (const log of relevantLogs) {
+      if (remainingPages <= 0) break;
+      
+      const logPages = log.pagesRead;
+      if (logPages <= remainingPages) {
+        currentKhatmaLogs.push(log);
+        remainingPages -= logPages;
+      } else {
+        // This log covers more pages than we have left, so we need to add it partially
+        const partialLog = { ...log, pagesRead: remainingPages };
+        currentKhatmaLogs.push(partialLog);
+        remainingPages = 0;
+      }
+    }
+    
+    // Track pages read in each juz for the current khatma
+    currentKhatmaLogs.forEach(log => {
       const juzPages = juzMap.get(log.juzNumber) || new Set<number>();
       
       if (log.startPage && log.endPage) {
@@ -194,7 +246,7 @@ export class PgStorage implements IStorage {
         }
       } else {
         // If specific pages aren't tracked, estimate based on juz number and pages read
-        const startPage = (log.juzNumber - 1) * 20 + 1;
+        const startPage = (log.juzNumber - 1) * pagesPerJuz + 1;
         for (let i = 0; i < log.pagesRead; i++) {
           juzPages.add(startPage + i);
         }
@@ -203,13 +255,24 @@ export class PgStorage implements IStorage {
       juzMap.set(log.juzNumber, juzPages);
     });
     
-    // Check if each juz is completed (typically 20 pages per juz)
+    // Create detailed map with completion status
     return Array.from(juzMap.entries()).map(([juzNumber, pages]) => {
-      // Consider a juz completed if all pages (about 20) are read
-      const pagesInJuz = 20;
+      const pagesRead = pages.size;
+      const percentComplete = Math.round((pagesRead / pagesPerJuz) * 100);
+      
+      let status: JuzStatus = 'not-started';
+      if (pagesRead >= pagesPerJuz) {
+        status = 'completed';
+      } else if (pagesRead > 0) {
+        status = 'partial';
+      }
+      
       return {
         juzNumber,
-        completed: pages.size >= pagesInJuz
+        status,
+        pagesRead,
+        totalPages: pagesPerJuz,
+        percentComplete
       };
     });
   }

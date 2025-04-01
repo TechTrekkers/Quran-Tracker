@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertReadingLogSchema, insertReadingGoalSchema } from "@shared/schema";
 import { z } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { pool } from "./db";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get user reading logs
@@ -177,6 +178,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error creating reading goal:", error);
         res.status(500).json({ message: "Failed to create reading goal" });
       }
+    }
+  });
+  
+  // Get detailed juz completion map
+  app.get("/api/juz-map", async (req: Request, res: Response) => {
+    try {
+      const userId = 1;
+      const juzMap = await storage.getDetailedJuzMap(userId);
+      res.json(juzMap);
+    } catch (error) {
+      console.error("Error fetching juz map:", error);
+      res.status(500).json({ message: "Failed to fetch juz map" });
+    }
+  });
+  
+  // Clear all reading data (for testing/reset purposes)
+  app.post("/api/clear-data", async (req: Request, res: Response) => {
+    try {
+      // Delete all reading logs and reset the sequence
+      await pool.query(`
+        TRUNCATE reading_logs RESTART IDENTITY;
+      `);
+      
+      // Reset total pages in the active reading goal
+      const userId = 1;
+      const activeGoal = await storage.getActiveReadingGoal(userId);
+      
+      if (activeGoal) {
+        await storage.updateReadingGoal(activeGoal.id, {
+          userId: activeGoal.userId,
+          isActive: true, // Keep it active
+          dailyTarget: activeGoal.dailyTarget, // Keep targets
+          weeklyTarget: activeGoal.weeklyTarget,
+          totalPages: 604 // Reset total pages to default
+        });
+      }
+      
+      // Re-initialize default user data if needed
+      await storage.initializeDefaultData();
+      
+      res.json({ message: "All reading data has been cleared successfully." });
+    } catch (error) {
+      console.error("Error clearing data:", error);
+      res.status(500).json({ message: "Failed to clear data" });
     }
   });
 
