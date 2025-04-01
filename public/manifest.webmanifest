@@ -7,7 +7,26 @@
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "id": "/",
+  "lang": "en",
+  "categories": ["education", "books", "productivity"],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Quran Tracker Dashboard"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Quran Tracker Mobile View"
+    }
+  ],
   "icons": [
     {
       "src": "icon-192.svg",

@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
+import path from 'path';
 import * as schema from "../shared/schema";
 
 // Initialize database connection for migrations
@@ -43,6 +44,17 @@ app.use((req, res, next) => {
   });
 
   next();
+});
+
+// Set up proper MIME types for PWA files
+app.get('/sw.js', (req, res) => {
+  res.set('Content-Type', 'application/javascript');
+  res.sendFile(path.resolve('./public/sw.js'));
+});
+
+app.get('/manifest.webmanifest', (req, res) => {
+  res.set('Content-Type', 'application/manifest+json');
+  res.sendFile(path.resolve('./public/manifest.webmanifest'));
 });
 
 (async () => {

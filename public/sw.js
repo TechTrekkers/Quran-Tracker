@@ -7,7 +7,7 @@ const urlsToCache = [
   '/manifest.webmanifest',
   '/icon-192.svg',
   '/icon-512.svg',
-  // Add other assets that should be cached for offline use
+  // CSS and JS files will be captured during the fetch
 ];
 
 // Install event - cache assets
@@ -39,6 +39,13 @@ self.addEventListener('activate', event => {
 
 // Fetch event - serve from cache if available, otherwise fetch from network
 self.addEventListener('fetch', event => {
+  // Handle API requests differently as they should use IndexedDB when offline
+  if (event.request.url.includes('/api/')) {
+    // For API requests, let the application handle the offline logic
+    // through the offlineApiClient.ts
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then(response => {
@@ -50,32 +57,43 @@ self.addEventListener('fetch', event => {
         // Clone the request because it's a one-time use stream
         const fetchRequest = event.request.clone();
         
-        return fetch(fetchRequest).then(response => {
-          // Check if we received a valid response
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-          
-          // Clone the response because it's a one-time use stream
-          const responseToCache = response.clone();
-          
-          caches.open(CACHE_NAME)
-            .then(cache => {
-              // Store the fetched response in the cache
-              cache.put(event.request, responseToCache);
-            });
+        return fetch(fetchRequest)
+          .then(response => {
+            // Don't cache non-success responses
+            if (!response || response.status !== 200) {
+              return response;
+            }
             
-          return response;
-        });
-      })
-      .catch(() => {
-        // If both cache and network fail, return a fallback
-        if (event.request.url.indexOf('/api/') !== -1) {
-          // For API requests, we might want to use IndexedDB or return default data
-          return new Response(JSON.stringify({ error: 'Offline mode - API unavailable' }), {
-            headers: { 'Content-Type': 'application/json' }
+            // Don't cache if this is a dynamic API call
+            if (response.url.includes('/api/')) {
+              return response;
+            }
+            
+            // Clone the response because it's a one-time use stream
+            const responseToCache = response.clone();
+            
+            caches.open(CACHE_NAME)
+              .then(cache => {
+                // Store the fetched response in the cache
+                cache.put(event.request, responseToCache);
+              })
+              .catch(error => {
+                console.error('Failed to cache response:', error);
+              });
+              
+            return response;
+          })
+          .catch(error => {
+            console.error('Fetch failed:', error);
+            
+            // If we're trying to fetch an HTML page, return the cached home page as fallback
+            if (event.request.headers.get('Accept')?.includes('text/html')) {
+              return caches.match('/');
+            }
+            
+            // For other resources, just let the error happen
+            throw error;
           });
-        }
       })
   );
 });
