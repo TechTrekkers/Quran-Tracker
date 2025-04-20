@@ -16,6 +16,12 @@ export async function apiRequest<T = any>(
 ): Promise<T> {
   const { data, ...rest } = options || {};
   
+  // Pre-check for offline
+  if (!navigator.onLine) {
+    console.log('Offline detected, using offline fallback for:', url);
+    return offlineApiRequest<T>(url, options);
+  }
+
   try {
     const res = await fetch(url, {
       method: 'GET', // Default method
@@ -28,12 +34,8 @@ export async function apiRequest<T = any>(
     await throwIfResNotOk(res);
     return await res.json();
   } catch (error) {
-    // If offline, try to use the offline capability
-    if (!navigator.onLine) {
-      console.log('Network error, using offline data');
-      return offlineApiRequest(url, options);
-    }
-    throw error;
+    console.log('Fetch error, using offline data', error);
+    return offlineApiRequest(url, options);
   }
 }
 
@@ -43,6 +45,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Pre-check for offline in queries
+    if (!navigator.onLine) {
+      console.log('Offline detected in query, using offline fallback for:', queryKey[0]);
+      return offlineApiRequest(queryKey[0] as string, { method: 'GET' });
+    }
+
     try {
       const res = await fetch(queryKey[0] as string, {
         credentials: "include",
@@ -55,12 +63,8 @@ export const getQueryFn: <T>(options: {
       await throwIfResNotOk(res);
       return await res.json();
     } catch (error) {
-      // If we're in production and offline, try to use the offline capability
-      if (!navigator.onLine) {
-        console.log('Network error in query, using offline data');
-        return offlineApiRequest(queryKey[0] as string, { method: 'GET' });
-      }
-      throw error;
+      console.log('Query error, using offline data', error);
+      return offlineApiRequest(queryKey[0] as string, { method: 'GET' });
     }
   };
 

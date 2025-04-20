@@ -86,18 +86,18 @@ export default function Dashboard() {
             <StatsCard 
               title="Pages Read" 
               value={stats?.totalPagesRead || 0}
-              subValue={`${Math.round(((stats?.totalPagesRead || 0) / 604) * 100)}% of total`}
+              subValue={`${((stats?.totalPagesRead || 0) / 604 * 100).toFixed(1)}% of total`}
               icon="book"
             />
             <StatsCard 
               title="Juz Completed" 
               value={stats?.completedJuz || 0}
-              subValue={`${Math.round(((stats?.completedJuz || 0) / 30) * 100)}% of total`}
+              subValue={`${((stats?.completedJuz || 0) / 30 * 100).toFixed(1)}% of total`}
               icon="bookmark"
             />
             <StatsCard 
               title="Consistency" 
-              value={`${stats?.consistency || 0}%`}
+              value={`${(stats?.consistency || 0).toFixed(1)}%`}
               subValue="Last 30 days"
               icon="calendar"
             />
@@ -129,21 +129,21 @@ export default function Dashboard() {
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-neutral-700 font-medium">Complete Quran</span>
-                  <span className="text-sm text-primary font-medium">{goal?.completionPercentage || 0}%</span>
+                  <span className="text-sm text-primary font-medium">{goal?.completionPercentage ? goal.completionPercentage.toFixed(1) : '0.0'}%</span>
                 </div>
                 <ProgressBar value={goal?.completionPercentage || 0} />
               </div>
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-neutral-700 font-medium">Daily Consistency</span>
-                  <span className="text-sm text-primary font-medium">{stats?.consistency || 0}%</span>
+                  <span className="text-sm text-primary font-medium">{stats?.consistency ? stats.consistency.toFixed(1) : '0.0'}%</span>
                 </div>
                 <ProgressBar value={stats?.consistency || 0} />
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-neutral-700 font-medium">Weekly Target</span>
-                  <span className="text-sm text-primary font-medium">{goal?.weeklyTargetCompletion || 0}%</span>
+                  <span className="text-sm text-primary font-medium">{goal?.weeklyTargetCompletion ? goal.weeklyTargetCompletion.toFixed(1) : '0.0'}%</span>
                 </div>
                 <ProgressBar value={goal?.weeklyTargetCompletion || 0} />
               </div>

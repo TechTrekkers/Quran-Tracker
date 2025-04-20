@@ -140,50 +140,58 @@ export class ClientStorage {
   }
   
   async getDetailedJuzMap(userId: number = 1): Promise<JuzMapItem[]> {
-    // Get total pages read in all khatmas
-    const totalPages = await this.getTotalPagesRead(userId);
-    
-    // Calculate completed khatmas
-    const khatmas = Math.floor(totalPages / 604);
-    
-    // Pages read in current khatma (after last complete khatma)
-    const pagesInCurrentKhatma = totalPages - (khatmas * 604);
-    
-    // Create the juz map
+    // Fetch all reading logs
+    const logs = await this.getReadingLogs(userId);
+    // Map to store progress per juz
+    const juzProgress: { [juz: number]: number } = {};
+    // Initialize all juz progress to 0
+    for (let i = 1; i <= totalJuzInQuran; i++) {
+      juzProgress[i] = 0;
+    }
+    // Go through each log and increment progress for the correct juz
+    for (const log of logs) {
+      const { startPage, endPage, pagesRead, juzNumber } = log;
+      if (startPage != null && endPage != null) {
+        // Distribute pages across all juz ranges
+        for (let j = 1; j <= totalJuzInQuran; j++) {
+          const { start, end } = getJuzPageRange(j);
+          const overlapStart = Math.max(start, startPage);
+          const overlapEnd = Math.min(end, endPage);
+          if (overlapEnd >= overlapStart) {
+            juzProgress[j] += overlapEnd - overlapStart + 1;
+          }
+        }
+      } else {
+        // Fallback: single-juz log
+        const j = juzNumber;
+        if (j >= 1 && j <= totalJuzInQuran) {
+          juzProgress[j] += pagesRead || 0;
+        }
+      }
+    }
+    // Build the map
     const juzMap: JuzMapItem[] = [];
-    
-    // Initialize the map with status for each juz
-    let accumulatedPages = 0;
-    
     for (let juzNum = 1; juzNum <= totalJuzInQuran; juzNum++) {
       const { start, end } = getJuzPageRange(juzNum);
       const juzSize = end - start + 1;
-      
-      // Calculate how many pages of this juz have been read in the current khatma
-      let pagesReadInJuz = 0;
-      if (accumulatedPages < pagesInCurrentKhatma) {
-        pagesReadInJuz = Math.min(pagesInCurrentKhatma - accumulatedPages, juzSize);
-      }
-      
-      accumulatedPages += juzSize;
-      
-      // Determine the status
+      // Fix: floating point and off-by-one issues for first/last juz
+      let pagesRead = Math.round(juzProgress[juzNum]);
+      if (pagesRead > juzSize) pagesRead = juzSize;
       let status: JuzStatus = 'not-started';
-      if (pagesReadInJuz === juzSize) {
+      if (pagesRead >= juzSize) {
         status = 'completed';
-      } else if (pagesReadInJuz > 0) {
+        pagesRead = juzSize;
+      } else if (pagesRead > 0) {
         status = 'partial';
       }
-      
       juzMap.push({
         juzNumber: juzNum,
         status,
-        pagesRead: pagesReadInJuz,
+        pagesRead,
         totalPages: juzSize,
-        percentComplete: (pagesReadInJuz / juzSize) * 100
+        percentComplete: Number(((pagesRead / juzSize) * 100).toFixed(1))
       });
     }
-    
     return juzMap;
   }
   

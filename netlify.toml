@@ -1,0 +1,27 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+  environment = { NODE_VERSION = "18" }
+
+# Serve manifest.json and sw.js as real files, not SPA fallback
+[[redirects]]
+  from = "/manifest.json"
+  to = "/manifest.json"
+  status = 200
+
+[[redirects]]
+  from = "/sw.js"
+  to = "/sw.js"
+  status = 200
+
+# Serve asset files directly
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+
+# SPA fallback for all other routes
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

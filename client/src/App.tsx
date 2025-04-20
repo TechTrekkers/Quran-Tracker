@@ -39,7 +39,9 @@ function Router() {
         </header>
         
         <Switch>
+        <Route path="/QuranTracker" component={Dashboard} />
           <Route path="/" component={Dashboard} />
+          <Route path="/dashboard" component={Dashboard} />
           <Route path="/history" component={History} />
           <Route path="/analytics" component={Analytics} />
           <Route path="/settings" component={Settings} />

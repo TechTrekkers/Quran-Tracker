@@ -1,15 +1,18 @@
 // Service Worker for Quran Tracker PWA
 
 const CACHE_NAME = 'quran-tracker-v2';
-const OFFLINE_PAGE = '/';
+const OFFLINE_PAGE = '/index.html';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.webmanifest',
+  '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg',
-  '/?source=pwa',
-  // Add more static assets here if needed
+  '/dashboard',
+  '/history',
+  '/analytics',
+  '/settings',
+  // Add more static assets/pages here if needed
 ];
 
 // Immediately claim clients and skip waiting
@@ -61,39 +64,30 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache strategy: Try network first, fall back to cache, then offline page
+  // For navigation requests, always serve the cached app shell (index.html) for SPA routing
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      caches.match('/index.html').then(response => {
+        return response || fetch(event.request);
+      })
+    );
+    return;
+  }
+
+  // For other requests, use cache-first strategy, fall back to network
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Cache successful responses for future offline use
-        if (response && response.status === 200 && response.type === 'basic') {
-          const responseClone = response.clone();
+    caches.match(event.request).then(cachedResponse => {
+      return cachedResponse || fetch(event.request).then(networkResponse => {
+        // Optionally cache new resources
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);
           });
         }
-        return response;
-      })
-      .catch(() => {
-        // When network fails, try to serve from cache
-        return caches.match(event.request)
-          .then(cachedResponse => {
-            if (cachedResponse) {
-              return cachedResponse;
-            }
-            
-            // If the request is for a page (HTML), return the offline page
-            if (event.request.mode === 'navigate' || 
-                (event.request.method === 'GET' && 
-                 event.request.headers.get('accept').includes('text/html'))) {
-              return caches.match(OFFLINE_PAGE);
-            }
-            
-            // For other resources like images/css that aren't in cache, just fail
-            console.log('[Service Worker] Resource not in cache:', event.request.url);
-            throw new Error('Resource not in cache and network unavailable');
-          });
-      })
+        return networkResponse;
+      });
+    })
   );
 });
 

@@ -9,6 +9,7 @@
     <meta name="description" content="Track your Quran reading progress, set goals, monitor khatma completion, and maintain consistent reading habits - even offline." />
     <meta name="theme-color" content="#4F46E5" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1F1F37" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#1976d2" />
     <meta name="color-scheme" content="light dark" />
     
     <!-- iOS specific meta tags -->
@@ -35,7 +36,7 @@
     <meta property="og:url" content="/" />
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
     
     <!-- Favicon and Icons -->
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -118,5 +119,16 @@
       </div>
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').then(function(registration) {
+            console.log('ServiceWorker registration successful with scope: ', registration.scope);
+          }, function(err) {
+            console.log('ServiceWorker registration failed: ', err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>
